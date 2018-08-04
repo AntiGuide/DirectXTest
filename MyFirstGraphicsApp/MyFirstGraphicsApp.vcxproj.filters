@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Quelldateien\Shader">
-      <UniqueIdentifier>{17ef45d0-e5b3-42eb-a5cb-54bd61af0146}</UniqueIdentifier>
+      <UniqueIdentifier>{906758cd-301f-4f9c-879c-0c1b23ae6a87}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -46,10 +46,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Default.hlsl">
+    <FxCompile Include="Default_ps.hlsl">
       <Filter>Quelldateien\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShader.hlsl">
+    <FxCompile Include="Default_vs.hlsl">
       <Filter>Quelldateien\Shader</Filter>
     </FxCompile>
   </ItemGroup>

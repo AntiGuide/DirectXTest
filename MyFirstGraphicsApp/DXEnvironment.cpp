@@ -241,27 +241,27 @@ bool DirectXState::initialize(HWND const &aHwnd)
 		return false;
 	}
 
-	mSwapChain = makeDirectXResourcePointer(swapChainUnmanaged);
-	mDevice = makeDirectXResourcePointer(deviceUnmanaged);
+	mSwapChain     = makeDirectXResourcePointer(swapChainUnmanaged);
+	mDevice        = makeDirectXResourcePointer(deviceUnmanaged);
 	mDeviceContext = makeDirectXResourcePointer(deviceImmediateContextUnmanaged);
 
-	ID3D11Texture2D *backBufferTextureUnmanaged = nullptr;
-	ID3D11RenderTargetView *backBufferRTVUnmanaged = nullptr;
+	// Fetch the backbuffer RTVs.
+	ID3D11Texture2D        *backBufferTextureUnmanaged = nullptr;
+	ID3D11RenderTargetView *backBufferRTVUnmanaged     = nullptr;
 
 	result = swapChainUnmanaged->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBufferTextureUnmanaged);
-
 	if (S_OK != result)
 	{
 		std::cout << "Failed to fetch swap chain back buffer texture.\n";
+		return false;
 	}
 
 	D3D11_RENDER_TARGET_VIEW_DESC backBufferRTVDescription = {};
-	backBufferRTVDescription.ViewDimension                 = D3D11_RTV_DIMENSION_TEXTURE2D;
-	backBufferRTVDescription.Texture2D.MipSlice            = 0;
-	backBufferRTVDescription.Format                        = swapChainDescriptor.BufferDesc.Format;
+	backBufferRTVDescription.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+	backBufferRTVDescription.Texture2D.MipSlice = 0;
+	backBufferRTVDescription.Format             = swapChainDescriptor.BufferDesc.Format;
 
 	result = deviceUnmanaged->CreateRenderTargetView(backBufferTextureUnmanaged, &backBufferRTVDescription, &backBufferRTVUnmanaged);
-
 	if (S_OK != result)
 	{
 		std::cout << "Failed to create back buffer RTV.\n";
@@ -271,12 +271,13 @@ bool DirectXState::initialize(HWND const &aHwnd)
 
 	backBufferTextureUnmanaged->Release();
 	mBackBufferRTV = makeDirectXResourcePointer(backBufferRTVUnmanaged);
-
+	
 	return true;
 }
 
 bool DirectXState::deinitialize()
 {
+	mBackBufferRTV = nullptr;
 	mDeviceContext->ClearState();
 	mDeviceContext = nullptr;
 	mDevice        = nullptr;

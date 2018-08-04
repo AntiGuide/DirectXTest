@@ -70,9 +70,9 @@ public:
 	bool initialize(HWND const &aHwnd);
 	bool deinitialize();
 
-	inline std::shared_ptr<IDXGISwapChain> swapChain() { return mSwapChain; }
-	inline std::shared_ptr<ID3D11Device> device() { return mDevice; }
-	inline std::shared_ptr<ID3D11DeviceContext> deviceContext() { return mDeviceContext; }
+	inline std::shared_ptr<IDXGISwapChain>         swapChain    () { return mSwapChain;     }
+	inline std::shared_ptr<ID3D11Device>           device       () { return mDevice;        }
+	inline std::shared_ptr<ID3D11DeviceContext>    deviceContext() { return mDeviceContext; }
 	inline std::shared_ptr<ID3D11RenderTargetView> backBufferRTV() { return mBackBufferRTV; }
 
 private:
