@@ -13,9 +13,9 @@ struct SMesh
 
 struct Vertex
 {
-	XMVECTOR mPosition;
-	XMVECTOR mColor;
-	XMVECTOR mTexCoord;
+	DirectX::XMVECTOR mPosition;
+	DirectX::XMVECTOR mColor;
+	DirectX::XMVECTOR mTexCoord;
 };
 
 class DXMesh

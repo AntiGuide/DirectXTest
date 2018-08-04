@@ -123,7 +123,49 @@ int WINAPI WinMain(
 		renderContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
 		renderContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
 		renderContext->IASetInputLayout(inputLayout);
-		renderContext->IASetPrimitiveTopology(? );
+		renderContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		//Viewport
+		D3D11_VIEWPORT viewPort = {};
+		viewPort.TopLeftX = 0 ;
+		viewPort.TopLeftY = 0 ;
+		viewPort.Width    = 1920;
+		viewPort.Height   = 1080;
+		viewPort.MinDepth = 0.0;
+		viewPort.MaxDepth = 1.0;
+
+		//Rasterizer
+		renderContext->RSSetViewports(1, &viewPort);
+		D3D11_RASTERIZER_DESC rasterizerDescription = {};
+		rasterizerDescription.AntialiasedLineEnable = true;
+		rasterizerDescription.CullMode              = D3D11_CULL_BACK;
+		rasterizerDescription.FrontCounterClockwise = true;
+		rasterizerDescription.DepthClipEnable       = true;
+		rasterizerDescription.FillMode              = D3D11_FILL_SOLID;
+		rasterizerDescription.MultisampleEnable     = false;
+		rasterizerDescription.ScissorEnable         = false;
+
+		ID3D11RasterizerState *rasterizer = nullptr;
+		HRESULT result = directXState->device()->CreateRasterizerState(&rasterizerDescription, &rasterizer);
+		if (S_OK != result)
+		{
+			std::cout << "Could not create rasterizer state";
+		}
+
+		renderContext->RSSetState(rasterizer);
+
+		//Output
+		ID3D11RenderTargetView *backBuffer = renderTargetView.get();
+		renderContext->OMSetRenderTargets(1, &backBuffer, nullptr);
+
+		//Shader
+		ID3D11VertexShader *vertexShader = triangleMaterial.mVertexShader.get();
+		ID3D11PixelShader *pixelShader = triangleMaterial.mFragmentShader.get();
+
+		renderContext->VSSetShader(vertexShader, nullptr, 0);
+		renderContext->PSSetShader(pixelShader, nullptr, 0);
+
+		renderContext->DrawIndexed(3, 0, 0);
 
 		swapChain->Present(0, 0);
 
