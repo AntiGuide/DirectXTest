@@ -9,9 +9,10 @@
 
 struct SMaterial
 {
-	std::shared_ptr<ID3D11InputLayout>  mInputLayout;
-	std::shared_ptr<ID3D11VertexShader> mVertexShader;
-	std::shared_ptr<ID3D11PixelShader>  mFragmentShader;
+	std::shared_ptr<ID3D11InputLayout>    mInputLayout;
+	std::shared_ptr<ID3D11VertexShader>   mVertexShader;
+	std::shared_ptr<ID3D11GeometryShader> mGeometryShader;
+	std::shared_ptr<ID3D11PixelShader>    mPixelShader;
 };
 
 class DXMaterial

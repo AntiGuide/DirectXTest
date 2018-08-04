@@ -31,8 +31,9 @@ bool DXMaterial::create(
 	std::string                   const &aMaterialName, 
 	SMaterial                           &aOutMaterial)
 {
-	std::vector<uint8_t> vertexShaderByteCode = {};
-	std::vector<uint8_t> pixelShaderByteCode  = {};
+	std::vector<uint8_t> vertexShaderByteCode    = {};
+	std::vector<uint8_t> pixelShaderByteCode     = {};
+	std::vector<uint8_t> geometryShaderByteCode  = {};
 
 	bool const vertexShaderLoaded = loadShader(std::string(aMaterialName) + "_vs.cso", vertexShaderByteCode);
 	if(false == vertexShaderLoaded)
@@ -47,7 +48,14 @@ bool DXMaterial::create(
 		std::cout << "Failed to load shaders for " << aMaterialName << ".\n";
 		return false;
 	}
-	
+
+	bool const geometryShaderLoaded = loadShader(std::string(aMaterialName) + "_gs.cso", geometryShaderByteCode);
+	if (false == geometryShaderLoaded)
+	{
+		std::cout << "Failed to load shaders for " << aMaterialName << ".\n";
+		return false;
+	}
+
 	ID3D11InputLayout *layoutUnmanaged = nullptr;
 
 	HRESULT result = aDevice->CreateInputLayout(aMesh.mInputElements, 3, vertexShaderByteCode.data(), vertexShaderByteCode.size(), &layoutUnmanaged);
@@ -57,8 +65,9 @@ bool DXMaterial::create(
 		return false;
 	}
 
-	ID3D11VertexShader *vertexShaderUnmanaged = nullptr;
-	ID3D11PixelShader  *pixelShaderUnmanaged  = nullptr;
+	ID3D11VertexShader   *vertexShaderUnmanaged   = nullptr;
+	ID3D11PixelShader    *pixelShaderUnmanaged    = nullptr;
+	ID3D11GeometryShader *geometryShaderUnmanaged = nullptr;
 
 	result = aDevice->CreateVertexShader(vertexShaderByteCode.data(), vertexShaderByteCode.size(), nullptr, &vertexShaderUnmanaged);
 	if (S_OK != result)
@@ -71,7 +80,16 @@ bool DXMaterial::create(
 	result = aDevice->CreatePixelShader(pixelShaderByteCode.data(), pixelShaderByteCode.size(), nullptr, &pixelShaderUnmanaged);
 	if (S_OK != result)
 	{
-		std::cout << "Failed to create vertex shader for triangle.\n";
+		std::cout << "Failed to create pixel shader for triangle.\n";
+		layoutUnmanaged->Release();
+		vertexShaderUnmanaged->Release();
+		return false;
+	}
+
+	result = aDevice->CreateGeometryShader(geometryShaderByteCode.data(), geometryShaderByteCode.size(), nullptr, &geometryShaderUnmanaged);
+	if (S_OK != result)
+	{
+		std::cout << "Failed to create geometry shader for triangle.\n";
 		layoutUnmanaged->Release();
 		vertexShaderUnmanaged->Release();
 		return false;
@@ -80,7 +98,8 @@ bool DXMaterial::create(
 	SMaterial material = {};
 	material.mInputLayout    = makeDirectXResourcePointer(layoutUnmanaged);
 	material.mVertexShader   = makeDirectXResourcePointer(vertexShaderUnmanaged);
-	material.mFragmentShader = makeDirectXResourcePointer(pixelShaderUnmanaged);
+	material.mPixelShader    = makeDirectXResourcePointer(pixelShaderUnmanaged);
+	material.mGeometryShader = makeDirectXResourcePointer(geometryShaderUnmanaged);
 
 	aOutMaterial = material;
 

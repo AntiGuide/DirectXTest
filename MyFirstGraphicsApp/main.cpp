@@ -21,13 +21,13 @@ int WINAPI WinMain(
 	int       nCommandShow)
 {
 	WNDCLASSEX windowClass = {};
-	windowClass.cbSize        = sizeof(WNDCLASSEX);
+	windowClass.cbSize = sizeof(WNDCLASSEX);
 	windowClass.lpszClassName = L"WindowClass";
-	windowClass.lpszMenuName  = nullptr;
-	windowClass.hInstance     = hInstance;
-	windowClass.lpfnWndProc   = DefaultWindowProcedure; 
+	windowClass.lpszMenuName = nullptr;
+	windowClass.hInstance = hInstance;
+	windowClass.lpfnWndProc = DefaultWindowProcedure;
 	windowClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	windowClass.style         = (CS_VREDRAW | CS_HREDRAW | CS_DROPSHADOW);
+	windowClass.style = (CS_VREDRAW | CS_HREDRAW | CS_DROPSHADOW);
 
 	ATOM const successful = RegisterClassEx(&windowClass);
 	if (!successful)
@@ -45,7 +45,7 @@ int WINAPI WinMain(
 		L"WindowClass",
 		L"My awesome window. FUCK YEAH!~",
 		windowStyle,
-		0,    0,
+		0, 0,
 		1920, 1080,
 		NULL,
 		NULL,
@@ -66,7 +66,7 @@ int WINAPI WinMain(
 	}
 
 	// Load triangle
-	SMesh      triangle        = {};
+	SMesh      triangle = {};
 	bool const triangleCreated = DXMesh::createTriangle(directXState->device(), triangle);
 	if (!triangleCreated)
 	{
@@ -83,13 +83,14 @@ int WINAPI WinMain(
 	ShowWindow(windowHandle, 1);
 
 	MSG msg = {};
+	
+	float color[4] = { 0.5f, 1.0f, 0.5f, 0.0f };
 
-	//GameLoop
+	// GameLoop
 	bool running = true;
-
 	while (running)
 	{
-		//Handle windows messages
+		// Handle windows messages
 		while (PeekMessage(&msg, windowHandle, 0, 0, PM_REMOVE))
 		{
 			if (WM_QUIT == msg.message)
@@ -102,17 +103,18 @@ int WINAPI WinMain(
 			DispatchMessage(&msg);
 		}
 
-		// Renderer
+		// Render
 
 		// Setup Pipeline
 		std::shared_ptr<ID3D11DeviceContext>    renderContext    = directXState->deviceContext();
 		std::shared_ptr<IDXGISwapChain>         swapChain        = directXState->swapChain();
 		std::shared_ptr<ID3D11RenderTargetView> renderTargetView = directXState->backBufferRTV();
 
-		float color[4] = { 0.5f, 1.0f, 0.5f, 0.0f };
+		color[0] = fmod((color[0] + 0.00001f), 1.0f);
+
 		renderContext->ClearRenderTargetView(renderTargetView.get(), color);
 
-		//Input Assembler
+		// Input Assembler
 		ID3D11Buffer *vertexBuffer = triangle.mVertexBuffer.get();
 		UINT          stride       = sizeof(Vertex);
 		UINT          offset       = 0;
@@ -125,17 +127,17 @@ int WINAPI WinMain(
 		renderContext->IASetInputLayout(inputLayout);
 		renderContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		//Viewport
+		// Rasterizer? Viewport?
 		D3D11_VIEWPORT viewPort = {};
-		viewPort.TopLeftX = 0 ;
-		viewPort.TopLeftY = 0 ;
+		viewPort.TopLeftX = 0;
+		viewPort.TopLeftY = 0;
 		viewPort.Width    = 1920;
 		viewPort.Height   = 1080;
 		viewPort.MinDepth = 0.0;
 		viewPort.MaxDepth = 1.0;
 
-		//Rasterizer
 		renderContext->RSSetViewports(1, &viewPort);
+
 		D3D11_RASTERIZER_DESC rasterizerDescription = {};
 		rasterizerDescription.AntialiasedLineEnable = true;
 		rasterizerDescription.CullMode              = D3D11_CULL_BACK;
@@ -144,32 +146,35 @@ int WINAPI WinMain(
 		rasterizerDescription.FillMode              = D3D11_FILL_SOLID;
 		rasterizerDescription.MultisampleEnable     = false;
 		rasterizerDescription.ScissorEnable         = false;
-
+		
 		ID3D11RasterizerState *rasterizer = nullptr;
 		HRESULT result = directXState->device()->CreateRasterizerState(&rasterizerDescription, &rasterizer);
 		if (S_OK != result)
 		{
-			std::cout << "Could not create rasterizer state";
+			std::cout << "Failed to create rasterizer state.\n";
 		}
+		else
+			renderContext->RSSetState(rasterizer);
 
-		renderContext->RSSetState(rasterizer);
-
-		//Output
+		// Output
 		ID3D11RenderTargetView *backBuffer = renderTargetView.get();
 		renderContext->OMSetRenderTargets(1, &backBuffer, nullptr);
 
-		//Shader
-		ID3D11VertexShader *vertexShader = triangleMaterial.mVertexShader.get();
-		ID3D11PixelShader *pixelShader = triangleMaterial.mFragmentShader.get();
+		// Shader
+		ID3D11VertexShader   *vertexShader   = triangleMaterial.mVertexShader.get();
+		ID3D11PixelShader    *pixelShader    = triangleMaterial.mPixelShader.get();
+		ID3D11GeometryShader *geometryShader = triangleMaterial.mGeometryShader.get();
 
-		renderContext->VSSetShader(vertexShader, nullptr, 0);
-		renderContext->PSSetShader(pixelShader, nullptr, 0);
+		renderContext->VSSetShader(vertexShader,   nullptr, 0);
+		renderContext->GSSetShader(geometryShader, nullptr, 0);
+		renderContext->PSSetShader(pixelShader,    nullptr, 0);
 
 		renderContext->DrawIndexed(3, 0, 0);
 
 		swapChain->Present(0, 0);
 
 		renderContext->ClearState();
+		rasterizer->Release();
 	}
 
 	ShowWindow(windowHandle, 0);

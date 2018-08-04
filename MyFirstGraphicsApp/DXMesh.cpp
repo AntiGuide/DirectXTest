@@ -6,9 +6,9 @@ using namespace DirectX;
 
 bool DXMesh::createTriangle(std::shared_ptr<ID3D11Device> aDevice, SMesh &aOutMesh)
 {
-	Vertex vertex0 = { { -1.0, 0.0, 0.0, 1.0 },{ 1.0, 0.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0, 0.0 } };
-	Vertex vertex1 = { {  1.0, 0.0, 0.0, 1.0 },{ 0.0, 1.0, 0.0, 0.0 },{ 1.0, 1.0, 0.0, 0.0 } };
-	Vertex vertex2 = { {  0.0, 2.0, 0.0, 1.0 },{ 0.0, 0.0, 1.0, 0.0 },{ 0.5, 0.0, 0.0, 0.0 } };
+	Vertex vertex0 = { { -1.0, -1.0, 0.0, 1.0 },{ 1.0, 0.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0, 0.0 } };
+	Vertex vertex1 = { {  1.0, -1.0, 0.0, 1.0 },{ 0.0, 1.0, 0.0, 0.0 },{ 1.0, 1.0, 0.0, 0.0 } };
+	Vertex vertex2 = { {  0.0,  1.0, 0.7, 1.0 },{ 0.0, 0.0, 1.0, 0.0 },{ 0.5, 0.0, 0.0, 0.0 } };
 
 	Vertex   vertices[3] = { vertex0, vertex1, vertex2 };
 	uint16_t indices[3] = { 0, 1, 2 };
@@ -16,11 +16,11 @@ bool DXMesh::createTriangle(std::shared_ptr<ID3D11Device> aDevice, SMesh &aOutMe
 	ID3D11Buffer *vertexBufferUnmanaged = nullptr;
 
 	D3D11_BUFFER_DESC vertexBufferDescription = {};
-	vertexBufferDescription.ByteWidth = 3 * sizeof(Vertex);
-	vertexBufferDescription.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDescription.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDescription.MiscFlags = 0;
-	vertexBufferDescription.CPUAccessFlags = 0;
+	vertexBufferDescription.ByteWidth           = 3 * sizeof(Vertex);
+	vertexBufferDescription.BindFlags           = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDescription.Usage               = D3D11_USAGE_DEFAULT;
+	vertexBufferDescription.MiscFlags           = 0;
+	vertexBufferDescription.CPUAccessFlags      = 0;
 	vertexBufferDescription.StructureByteStride = 0;
 
 	D3D11_SUBRESOURCE_DATA vertexBufferData = {};
@@ -38,11 +38,11 @@ bool DXMesh::createTriangle(std::shared_ptr<ID3D11Device> aDevice, SMesh &aOutMe
 	ID3D11Buffer *indexBufferUnmanaged = nullptr;
 
 	D3D11_BUFFER_DESC indexBufferDescription = {};
-	indexBufferDescription.ByteWidth = 3 * sizeof(uint16_t);
-	indexBufferDescription.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	indexBufferDescription.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDescription.MiscFlags = 0;
-	indexBufferDescription.CPUAccessFlags = 0;
+	indexBufferDescription.ByteWidth           = 3 * sizeof(uint16_t);
+	indexBufferDescription.BindFlags           = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDescription.Usage               = D3D11_USAGE_DEFAULT;
+	indexBufferDescription.MiscFlags           = 0;
+	indexBufferDescription.CPUAccessFlags      = 0;
 	indexBufferDescription.StructureByteStride = 0;
 
 	D3D11_SUBRESOURCE_DATA indexBufferData = {};
