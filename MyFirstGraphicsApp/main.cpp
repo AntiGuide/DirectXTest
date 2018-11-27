@@ -1,4 +1,5 @@
 #include <exception>
+#include <random>
 #include <Windows.h>
 
 #include "DXEnvironment.h"
@@ -79,17 +80,57 @@ int WINAPI WinMain(
 	blitMaterialDesc.vertex.shaderFileFn = "Perlin_vs.cso";
 	blitMaterialDesc.fragment.useStage = true;
 	blitMaterialDesc.fragment.shaderFileFn = "Perlin_ps.cso";
-
-	SMaterialTextureDesc perlinInput = {};
-	perlinInput.textureFilename = "textures/perlin_input.jpg";
-	blitMaterialDesc.fragment.textures.push_back(perlinInput);
-
+	
 	SMaterial blitMaterial = {};
 	bool const materialCreated = DXMaterial::create(directXState->device(), unitQuad, "PerlinNoise", blitMaterialDesc, blitMaterial);
 	if (!materialCreated)
 	{
 		throw std::runtime_error("Failed to create material.\n");
 	}
+
+	// Create Perlin input.
+
+	std::vector<DirectX::XMVECTOR> perlinInputDataArray(512 * 512);
+
+	std::random_device                 device;
+	std::mt19937                       generator(device());
+	std::uniform_int_distribution<int> distribution(0, 120000);
+
+	for (uint32_t x = 0; x < 512; ++x)
+	{
+		for (uint32_t y = 0; y < 512; ++y)
+		{
+			float r = distribution(generator) / 120000.0;
+			float g = distribution(generator) / 120000.0;
+			float b = distribution(generator) / 120000.0;
+			float a = 1.0;
+
+			perlinInputDataArray[y * 512 + x].m128_f32[0] = r;
+			perlinInputDataArray[y * 512 + x].m128_f32[1] = g;
+			perlinInputDataArray[y * 512 + x].m128_f32[2] = b;
+			perlinInputDataArray[y * 512 + x].m128_f32[3] = a;
+		}
+	}
+
+	D3D11_SUBRESOURCE_DATA perlinInputData{};
+	perlinInputData.pSysMem     = perlinInputDataArray.data();
+	perlinInputData.SysMemPitch = sizeof(DirectX::XMVECTOR) * 256;
+
+	std::shared_ptr<ID3D11Texture2D> perlinInputTexture = 
+		DXTexture::createTexture(directXState->device(), 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &perlinInputData);
+
+	std::shared_ptr<ID3D11ShaderResourceView> perlinInputTextureResourceView =
+		DXTexture::createTextureResourceView(directXState->device(), perlinInputTexture, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	std::shared_ptr<ID3D11SamplerState> perlinInputTextureSampler =
+		DXTexture::createSampler(directXState->device(), D3D11_FILTER_MIN_MAG_MIP_POINT);
+
+	SMaterialTexture perlinInput{};
+	perlinInput.mTexture             = perlinInputTexture;
+	perlinInput.mTextureResourceView = perlinInputTextureResourceView;
+	perlinInput.mSampler             = perlinInputTextureSampler;
+
+	blitMaterial.fragmentShaderTextures.push_back(perlinInput);
 
 	// Load triangle
 	SMesh      triangle = {};
