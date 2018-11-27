@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 static bool loadShader(
 	std::string          const &aFilename, 
@@ -94,90 +92,7 @@ bool DXMaterial::create(
 		std::cout << "Failed to create geometry shader for triangle.\n";
 		layoutUnmanaged->Release();
 		vertexShaderUnmanaged->Release();
-		pixelShaderUnmanaged->Release();
 		return false;
-	}
-
-	ID3D11Texture2D          *textureUnmanaged     = nullptr;
-	ID3D11ShaderResourceView *textureViewUnmanaged = nullptr;
-	ID3D11SamplerState       *samplerUnmanaged     = nullptr;
-
-	int32_t width       = 0;
-	int32_t height      = 0;
-	int32_t numChannels = 0;
-
-	// size = width * height * numChannels * 8.
-	stbi_uc *imageData = stbi_load("textures/test.png", &width, &height, &numChannels, 4);
-	if (nullptr != imageData)
-	{
-		D3D11_TEXTURE2D_DESC textureDescription{};
-		textureDescription.Width              = width;
-		textureDescription.Height             = height;
-		textureDescription.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDescription.ArraySize          = 1;
-		textureDescription.MipLevels          = 1;
-		textureDescription.BindFlags          = D3D11_BIND_SHADER_RESOURCE;
-		textureDescription.CPUAccessFlags     = 0;
-		textureDescription.MiscFlags          = 0;
-		textureDescription.SampleDesc.Count   = 1;
-		textureDescription.SampleDesc.Quality = 0;
-		textureDescription.Usage              = D3D11_USAGE_DEFAULT;
-
-		D3D11_SUBRESOURCE_DATA textureData = {};
-		textureData.pSysMem     = imageData;
-		textureData.SysMemPitch = width * 4 * sizeof(stbi_uc);
-
-		result = aDevice->CreateTexture2D(&textureDescription, &textureData, &textureUnmanaged);
-
-		stbi_image_free(imageData);
-
-		if (S_OK != result)
-		{
-			std::cout << "Failed to load default texture.\n";
-			layoutUnmanaged->Release();
-			vertexShaderUnmanaged->Release();
-			pixelShaderUnmanaged->Release();
-			geometryShaderUnmanaged->Release();
-			return false;
-		}		
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC textureViewDescription = {};
-		textureViewDescription.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		textureViewDescription.Texture2D.MipLevels       = 1;
-		textureViewDescription.Texture2D.MostDetailedMip = 0;
-		textureViewDescription.Format                     = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-		result = aDevice->CreateShaderResourceView(textureUnmanaged, &textureViewDescription, &textureViewUnmanaged);
-		if (S_OK != result)
-		{
-			std::cout << "Failed to create texture view.\n";
-			layoutUnmanaged->Release();
-			vertexShaderUnmanaged->Release();
-			pixelShaderUnmanaged->Release();
-			geometryShaderUnmanaged->Release();
-			textureUnmanaged->Release();
-			return false;
-		}
-		
-		D3D11_SAMPLER_DESC samplerDescription = {};
-		samplerDescription.AddressU       = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDescription.AddressV       = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDescription.AddressW       = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDescription.Filter         = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-		samplerDescription.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-
-		result = aDevice->CreateSamplerState(&samplerDescription, &samplerUnmanaged);
-		if (S_OK != result)
-		{
-			std::cout << "Failed to create sampler state.\n";
-			layoutUnmanaged->Release();
-			vertexShaderUnmanaged->Release();
-			pixelShaderUnmanaged->Release();
-			geometryShaderUnmanaged->Release();
-			textureUnmanaged->Release();
-			textureViewUnmanaged->Release();
-			return false;
-		}
 	}
 
 	SMaterial material = {};
@@ -185,9 +100,6 @@ bool DXMaterial::create(
 	material.mVertexShader   = makeDirectXResourcePointer(vertexShaderUnmanaged);
 	material.mPixelShader    = makeDirectXResourcePointer(pixelShaderUnmanaged);
 	material.mGeometryShader = makeDirectXResourcePointer(geometryShaderUnmanaged);
-	material.mTexture        = makeDirectXResourcePointer(textureUnmanaged);
-	material.mTextureView    = makeDirectXResourcePointer(textureViewUnmanaged);
-	material.mSampler        = makeDirectXResourcePointer(samplerUnmanaged);
 
 	aOutMaterial = material;
 

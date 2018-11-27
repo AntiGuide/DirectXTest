@@ -55,5 +55,8 @@
     <FxCompile Include="Default_gs.hlsl">
       <Filter>Quelldateien\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="GeometryShader.hlsl">
+      <Filter>Quelldateien\Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

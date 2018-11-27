@@ -161,17 +161,13 @@ int WINAPI WinMain(
 		renderContext->OMSetRenderTargets(1, &backBuffer, nullptr);
 
 		// Shader
-		ID3D11VertexShader       *vertexShader    = triangleMaterial.mVertexShader.get();
-		ID3D11PixelShader        *pixelShader     = triangleMaterial.mPixelShader.get();
-		ID3D11GeometryShader     *geometryShader  = triangleMaterial.mGeometryShader.get();
-		ID3D11ShaderResourceView *textureView     = triangleMaterial.mTextureView.get();
-		ID3D11SamplerState       *textureSampler  = triangleMaterial.mSampler.get();
+		ID3D11VertexShader   *vertexShader   = triangleMaterial.mVertexShader.get();
+		ID3D11PixelShader    *pixelShader    = triangleMaterial.mPixelShader.get();
+		ID3D11GeometryShader *geometryShader = triangleMaterial.mGeometryShader.get();
 
 		renderContext->VSSetShader(vertexShader,   nullptr, 0);
-		// renderContext->GSSetShader(geometryShader, nullptr, 0);
+		renderContext->GSSetShader(geometryShader, nullptr, 0);
 		renderContext->PSSetShader(pixelShader,    nullptr, 0);
-		renderContext->PSSetShaderResources(0, 1, &textureView);
-		renderContext->PSSetSamplers(0, 1, &textureSampler);
 
 		renderContext->DrawIndexed(3, 0, 0);
 
