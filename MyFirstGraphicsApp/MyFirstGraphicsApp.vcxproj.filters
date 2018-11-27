@@ -44,6 +44,9 @@
     <ClInclude Include="DXMaterial.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="DXTexture.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Default_ps.hlsl">
@@ -53,9 +56,6 @@
       <Filter>Quelldateien\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Default_gs.hlsl">
-      <Filter>Quelldateien\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="GeometryShader.hlsl">
       <Filter>Quelldateien\Shader</Filter>
     </FxCompile>
   </ItemGroup>

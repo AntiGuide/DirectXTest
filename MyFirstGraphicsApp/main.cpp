@@ -73,8 +73,20 @@ int WINAPI WinMain(
 		throw std::runtime_error("Failed to create triangle.\n");
 	}
 
+	SMaterialDesc triangleMaterialDesc = {};
+	triangleMaterialDesc.vertex.useStage       = true;
+	triangleMaterialDesc.vertex.shaderFileFn   = "Default_vs.cso";
+	triangleMaterialDesc.geometry.useStage     = true;
+	triangleMaterialDesc.geometry.shaderFileFn = "Default_gs.cso";
+	triangleMaterialDesc.fragment.useStage     = true;
+	triangleMaterialDesc.fragment.shaderFileFn = "Default_ps.cso";
+
+	SMaterialTextureDesc textureDesc = {};
+	textureDesc.textureFilename = "textures/test.png";
+	triangleMaterialDesc.fragment.textures.push_back(textureDesc);
+
 	SMaterial triangleMaterial = {};
-	bool const materialCreated = DXMaterial::create(directXState->device(), triangle, "Default", triangleMaterial);
+	bool const materialCreated = DXMaterial::create(directXState->device(), triangle, "Default", triangleMaterialDesc, triangleMaterial);
 	if (!materialCreated)
 	{
 		throw std::runtime_error("Failed to create material.\n");
@@ -161,13 +173,28 @@ int WINAPI WinMain(
 		renderContext->OMSetRenderTargets(1, &backBuffer, nullptr);
 
 		// Shader
-		ID3D11VertexShader   *vertexShader   = triangleMaterial.mVertexShader.get();
-		ID3D11PixelShader    *pixelShader    = triangleMaterial.mPixelShader.get();
-		ID3D11GeometryShader *geometryShader = triangleMaterial.mGeometryShader.get();
+		ID3D11VertexShader       *vertexShader    = triangleMaterial.mVertexShader.get();
+		ID3D11PixelShader        *pixelShader     = triangleMaterial.mPixelShader.get();
+		ID3D11GeometryShader     *geometryShader  = triangleMaterial.mGeometryShader.get();
 
-		renderContext->VSSetShader(vertexShader,   nullptr, 0);
-		renderContext->GSSetShader(geometryShader, nullptr, 0);
+		renderContext->VSSetShader(vertexShader, nullptr, 0);
+		for (uint32_t k = 0; k < triangleMaterial.vertexShaderTextures.size(); ++k)
+		{
+			ID3D11ShaderResourceView *const texture = triangleMaterial.vertexShaderTextures[k].mTextureResourceView.get();
+			ID3D11SamplerState       *const sampler = triangleMaterial.vertexShaderTextures[k].mSampler.get();
+			renderContext->VSSetShaderResources(k, 1, &texture);
+			renderContext->VSSetSamplers(k, 1, &sampler);
+		}
+
+		// renderContext->GSSetShader(geometryShader, nullptr, 0);
 		renderContext->PSSetShader(pixelShader,    nullptr, 0);
+		for (uint32_t k = 0; k < triangleMaterial.fragmentShaderTextures.size(); ++k)
+		{
+			ID3D11ShaderResourceView *const texture = triangleMaterial.fragmentShaderTextures[k].mTextureResourceView.get();
+			ID3D11SamplerState       *const sampler = triangleMaterial.fragmentShaderTextures[k].mSampler.get();
+			renderContext->PSSetShaderResources(k, 1, &texture);
+			renderContext->PSSetSamplers(k, 1, &sampler);
+		}
 
 		renderContext->DrawIndexed(3, 0, 0);
 
