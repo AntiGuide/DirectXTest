@@ -4,6 +4,7 @@
 #include "DXEnvironment.h"
 #include "DXMesh.h"
 #include "DXMaterial.h"
+#include "DXTexture.h"
 
 LRESULT CALLBACK DefaultWindowProcedure(
 	HWND   windowHandle,
@@ -65,9 +66,34 @@ int WINAPI WinMain(
 		throw std::runtime_error("Failed to initialized DirectXState\n");
 	}
 
+	// Load Unit-Quad
+	SMesh      unitQuad = {};
+	bool const unitQuadCreated = DXMesh::createUnitQuad(directXState->device(), unitQuad);
+	if (!unitQuadCreated)
+	{
+		throw std::runtime_error("Failed to create unit quad.\n");
+	}
+
+	SMaterialDesc blitMaterialDesc = {};
+	blitMaterialDesc.vertex.useStage = true;
+	blitMaterialDesc.vertex.shaderFileFn = "Perlin_vs.cso";
+	blitMaterialDesc.fragment.useStage = true;
+	blitMaterialDesc.fragment.shaderFileFn = "Perlin_ps.cso";
+
+	SMaterialTextureDesc perlinInput = {};
+	perlinInput.textureFilename = "textures/perlin_input.jpg";
+	blitMaterialDesc.fragment.textures.push_back(perlinInput);
+
+	SMaterial blitMaterial = {};
+	bool const materialCreated = DXMaterial::create(directXState->device(), unitQuad, "PerlinNoise", blitMaterialDesc, blitMaterial);
+	if (!materialCreated)
+	{
+		throw std::runtime_error("Failed to create material.\n");
+	}
+
 	// Load triangle
 	SMesh      triangle = {};
-	bool const triangleCreated = DXMesh::createTriangle(directXState->device(), triangle);
+	bool const triangleCreated = DXMesh::createUnitQuad(directXState->device(), triangle, 2);
 	if (!triangleCreated)
 	{
 		throw std::runtime_error("Failed to create triangle.\n");
@@ -86,11 +112,153 @@ int WINAPI WinMain(
 	triangleMaterialDesc.fragment.textures.push_back(textureDesc);
 
 	SMaterial triangleMaterial = {};
-	bool const materialCreated = DXMaterial::create(directXState->device(), triangle, "Default", triangleMaterialDesc, triangleMaterial);
-	if (!materialCreated)
+	bool const triangleMaterialCreated = DXMaterial::create(directXState->device(), triangle, "Default", triangleMaterialDesc, triangleMaterial);
+	if (!triangleMaterialCreated)
 	{
 		throw std::runtime_error("Failed to create material.\n");
 	}
+
+	DirectX::XMMATRIX unitQuadTranslation          = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.2f);
+	DirectX::XMMATRIX unitQuadScale                = DirectX::XMMatrixScaling(1024.0, 1024.0, 1.0f);
+	DirectX::XMMATRIX worldMatrix                  = DirectX::XMMatrixMultiply(unitQuadScale, unitQuadTranslation);
+	DirectX::XMMATRIX viewMatrix                   = DirectX::XMMatrixLookToLH(
+														{ 0.0, 0.0, 0.0, 0.0 }, // Position
+													    { 0.0, 0.0, 1.0, 0.0 }, // Forward
+														{ 0.0, 1.0, 0.0, 0.0 });// Up
+	DirectX::XMMATRIX orthographicProjectionMatrix = DirectX::XMMatrixOrthographicLH(1024, 1024, 0.1f, 1.0f);
+
+	struct Matrices
+	{
+		DirectX::XMMATRIX world;
+		DirectX::XMMATRIX view;
+		DirectX::XMMATRIX projection;
+	} unitQuadMatrices;
+
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	constantBufferDesc.ByteWidth           = sizeof(Matrices);
+	constantBufferDesc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.Usage               = D3D11_USAGE_DYNAMIC;
+	constantBufferDesc.MiscFlags           = 0;
+	constantBufferDesc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
+	constantBufferDesc.StructureByteStride = 0;
+
+	ID3D11Buffer *constantBufferUnmanaged = nullptr;
+	HRESULT result = directXState->device()->CreateBuffer(&constantBufferDesc, nullptr, &constantBufferUnmanaged);
+	if (S_OK != result)
+	{
+		std::cout << "Failed to create constant buffer.\n";
+	}
+
+	std::shared_ptr<ID3D11DeviceContext> deviceContext = directXState->deviceContext();
+	D3D11_MAPPED_SUBRESOURCE mappedConstantBufferData = {};
+
+	result = deviceContext->Map(constantBufferUnmanaged,
+								0,
+								D3D11_MAP_WRITE_DISCARD,
+								0,
+								&mappedConstantBufferData);
+
+	if (S_OK == result)
+	{
+		Matrices *matrices = static_cast<Matrices*>(mappedConstantBufferData.pData);
+		matrices->world      = worldMatrix;
+		matrices->view       = viewMatrix;
+		matrices->projection = orthographicProjectionMatrix;
+
+		deviceContext->Unmap(constantBufferUnmanaged, 0);
+	}
+
+
+
+	D3D11_RASTERIZER_DESC rasterizerDescription = {};
+	rasterizerDescription.AntialiasedLineEnable = true;
+	rasterizerDescription.CullMode = D3D11_CULL_BACK;
+	rasterizerDescription.FrontCounterClockwise = true;
+	rasterizerDescription.DepthClipEnable = true;
+	rasterizerDescription.FillMode = D3D11_FILL_SOLID;
+	rasterizerDescription.MultisampleEnable = false;
+	rasterizerDescription.ScissorEnable = false;
+
+	ID3D11RasterizerState *rasterizer = nullptr;
+	result = directXState->device()->CreateRasterizerState(&rasterizerDescription, &rasterizer);
+	if (S_OK != result)
+	{
+		std::cout << "Failed to create rasterizer state.\n";
+	}
+
+	// Render To Texture
+
+	std::shared_ptr<ID3D11Texture2D> renderTargetTexture = DXTexture::createTexture(directXState->device(),
+		                                                                            1024, 
+		                                                                            1024, 
+		                                                                            1,
+		                                                                            DXGI_FORMAT_R8_UNORM, 
+		                                                                            nullptr);
+	std::shared_ptr<ID3D11RenderTargetView> renderTargetView = 
+		DXTexture::createTextureRenderTargetView(directXState->device(),
+			                                     renderTargetTexture, 
+			                                     DXGI_FORMAT_R8_UNORM);
+
+	std::shared_ptr<ID3D11ShaderResourceView> renderTargetResourceView =
+		DXTexture::createTextureResourceView(directXState->device(),
+			                                 renderTargetTexture,
+			                                 DXGI_FORMAT_R8_UNORM);
+
+	// deviceContext->ClearRenderTargetView(renderTargetView.get(), color);
+
+	// Input Assembler
+	ID3D11Buffer *vertexBuffer = unitQuad.mVertexBuffer.get();
+	UINT          stride = sizeof(Vertex);
+	UINT          offset = 0;
+
+	ID3D11Buffer      *indexBuffer = unitQuad.mIndexBuffer.get();
+	ID3D11InputLayout *inputLayout = blitMaterial.mInputLayout.get();
+
+	deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+	deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	deviceContext->IASetInputLayout(inputLayout);
+	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// Rasterizer? Viewport?
+	D3D11_VIEWPORT viewPort = {};
+	viewPort.TopLeftX = 0;
+	viewPort.TopLeftY = 0;
+	viewPort.Width    = 1024;
+	viewPort.Height   = 1024;
+	viewPort.MinDepth = 0.0;
+	viewPort.MaxDepth = 1.0;
+
+	deviceContext->RSSetViewports(1, &viewPort);
+	deviceContext->RSSetState(rasterizer);
+
+	// Output
+	ID3D11RenderTargetView *renderToTextureTarget = renderTargetView.get();
+	deviceContext->OMSetRenderTargets(1, &renderToTextureTarget, nullptr);
+
+	// Shader
+	ID3D11VertexShader       *vertexShader   = blitMaterial.mVertexShader.get();
+	ID3D11PixelShader        *pixelShader    = blitMaterial.mPixelShader.get();
+
+	deviceContext->VSSetShader(vertexShader, nullptr, 0);
+	deviceContext->VSSetConstantBuffers(0, 1, &constantBufferUnmanaged);
+
+	// renderContext->GSSetShader(geometryShader, nullptr, 0);
+	deviceContext->PSSetShader(pixelShader, nullptr, 0);
+	for (uint32_t k = 0; k < blitMaterial.fragmentShaderTextures.size(); ++k)
+	{
+		ID3D11ShaderResourceView *const texture = blitMaterial.fragmentShaderTextures[k].mTextureResourceView.get();
+		ID3D11SamplerState       *const sampler = blitMaterial.fragmentShaderTextures[k].mSampler.get();
+		deviceContext->PSSetShaderResources(k, 1, &texture);
+		deviceContext->PSSetSamplers(k, 1, &sampler);
+	}
+
+	deviceContext->DrawIndexed(6, 0, 0);
+
+	// Render To Texture
+
+	triangleMaterial.fragmentShaderTextures[0].mTexture             = renderTargetTexture;
+	triangleMaterial.fragmentShaderTextures[0].mTextureResourceView = renderTargetResourceView;
+
 
 	ShowWindow(windowHandle, 1);
 
@@ -122,7 +290,7 @@ int WINAPI WinMain(
 		std::shared_ptr<IDXGISwapChain>         swapChain        = directXState->swapChain();
 		std::shared_ptr<ID3D11RenderTargetView> renderTargetView = directXState->backBufferRTV();
 
-		color[0] = fmod((color[0] + 0.00001f), 1.0f);
+		// color[0] = fmod((color[0] + 0.00001f), 1.0f);
 
 		renderContext->ClearRenderTargetView(renderTargetView.get(), color);
 
@@ -149,24 +317,8 @@ int WINAPI WinMain(
 		viewPort.MaxDepth = 1.0;
 
 		renderContext->RSSetViewports(1, &viewPort);
-
-		D3D11_RASTERIZER_DESC rasterizerDescription = {};
-		rasterizerDescription.AntialiasedLineEnable = true;
-		rasterizerDescription.CullMode              = D3D11_CULL_BACK;
-		rasterizerDescription.FrontCounterClockwise = true;
-		rasterizerDescription.DepthClipEnable       = true;
-		rasterizerDescription.FillMode              = D3D11_FILL_SOLID;
-		rasterizerDescription.MultisampleEnable     = false;
-		rasterizerDescription.ScissorEnable         = false;
-		
-		ID3D11RasterizerState *rasterizer = nullptr;
-		HRESULT result = directXState->device()->CreateRasterizerState(&rasterizerDescription, &rasterizer);
-		if (S_OK != result)
-		{
-			std::cout << "Failed to create rasterizer state.\n";
-		}
-		else
-			renderContext->RSSetState(rasterizer);
+				
+		renderContext->RSSetState(rasterizer);
 
 		// Output
 		ID3D11RenderTargetView *backBuffer = renderTargetView.get();
@@ -196,13 +348,14 @@ int WINAPI WinMain(
 			renderContext->PSSetSamplers(k, 1, &sampler);
 		}
 
-		renderContext->DrawIndexed(3, 0, 0);
+		renderContext->DrawIndexed(6, 0, 0);
 
 		swapChain->Present(0, 0);
 
 		renderContext->ClearState();
-		rasterizer->Release();
 	}
+
+	rasterizer->Release();
 
 	ShowWindow(windowHandle, 0);
 

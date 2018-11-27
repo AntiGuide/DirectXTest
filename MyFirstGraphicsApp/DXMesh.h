@@ -23,5 +23,6 @@ struct SMesh
 class DXMesh
 {
 public:
+	static bool createUnitQuad(std::shared_ptr<ID3D11Device> aDevice, SMesh &aOutMesh, uint32_t length = 1);
 	static bool createTriangle(std::shared_ptr<ID3D11Device> aDevice, SMesh &aOutMesh);
 };

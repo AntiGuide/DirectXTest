@@ -73,29 +73,12 @@ bool DXMaterial::create(
 					}
 
 					std::shared_ptr<ID3D11ShaderResourceView> resourceView = DXTexture::createTextureResourceView(aDevice, textureManaged, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-					D3D11_SAMPLER_DESC samplerDescription = {};
-					samplerDescription.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-					samplerDescription.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-					samplerDescription.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-					samplerDescription.Filter   = D3D11_FILTER_MIN_MAG_MIP_POINT;
-					samplerDescription.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-
-					HRESULT result = aDevice->CreateSamplerState(&samplerDescription, &samplerUnmanaged);
-					if (S_OK != result)
-					{
-						std::cout << "Failed to create sampler state.\n";
-
-						textureUnmanaged->Release();
-						textureViewUnmanaged->Release();
-
-						break;
-					}
+					std::shared_ptr<ID3D11SamplerState>       samplerState = DXTexture::createSampler(aDevice, D3D11_FILTER_MIN_MAG_MIP_POINT);
 
 					SMaterialTexture texture     = {};
 					texture.mTexture             = textureManaged;
 					texture.mTextureResourceView = resourceView;
-					texture.mSampler             = makeDirectXResourcePointer(samplerUnmanaged);
+					texture.mSampler             = samplerState;
 
 					textures.push_back(texture);
 				}
